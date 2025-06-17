@@ -6,8 +6,6 @@
  * - Registers the model and its column definitions in the `ModelRegistry`
  * - Returns a model interface object with metadata and basic interaction methods
  *
- * Future extensions may include: actual DB queries, relationships, hooks, and more.
- *
  * @template T - The shape of the model as a record of column names to types
  *
  * @param {string} tableName - The name of the model/table (e.g., "User", "Post")

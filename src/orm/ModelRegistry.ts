@@ -17,7 +17,7 @@
  * @property {boolean} [unique] - Whether this column has a unique constraint.
  * @property {boolean} [nullable] - Whether this column allows null values.
  */
-type ColumnDefinition = {
+export type ColumnDefinition = {
   type: string;
   primaryKey?: boolean;
   unique?: boolean;
@@ -42,7 +42,7 @@ type ColumnDefinition = {
  *  }
  */
 
-type TableSchema = {
+export type TableSchema = {
   tableName: string;
   columns: Record<string, ColumnDefinition>;
 };
