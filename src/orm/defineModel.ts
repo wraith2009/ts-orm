@@ -114,7 +114,6 @@ export function defineModel<T extends Record<string, any>>(
 
       const values = keys.map((k) => where[k as keyof T]);
 
-      // Optional improvement: track rowCount from query function
       const result = await query<T>(sql, values);
       return result.length;
     },

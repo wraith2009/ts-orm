@@ -15,7 +15,7 @@ const typeMap: Record<string, string> = {
 };
 
 function columnToSQL(columnName: string, col: ColumnDefinition): string {
-  let parts = [`"${columnName}"`]; // ✅ only quotes around column name
+  let parts = [`"${columnName}"`];
 
   const sqlType = typeMap[col.type];
   if (!sqlType) throw new Error(`Unknown column type: ${col.type}`);
