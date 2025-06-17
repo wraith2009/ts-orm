@@ -31,7 +31,13 @@
  * User.findAll(); // Logs: Finding all from User
  */
 
+import { query } from "../db/connection";
 import { ModelRegistry } from "./ModelRegistry";
+
+/**
+ * Defines and registers a new model (i.e., a database table) with its column schema.
+ * Includes basic CRUD operations: create, find, update, delete.
+ */
 export function defineModel<T extends Record<string, any>>(
   tableName: string,
   columns: Record<keyof T, any>
@@ -40,9 +46,77 @@ export function defineModel<T extends Record<string, any>>(
 
   return {
     tableName,
-    columns,
-    findAll: () => {
-      console.log(`Finding all from ${tableName}`);
+
+    async create(data: Partial<T>): Promise<T> {
+      const keys = Object.keys(data);
+      const values = Object.values(data);
+      const placeholders = keys.map((_, i) => `$${i + 1}`);
+
+      const sql = `INSERT INTO "${tableName}" (${keys
+        .map((k) => `"${k}"`)
+        .join(", ")}) VALUES (${placeholders.join(", ")}) RETURNING *;`;
+
+      const result = await query<T>(sql, values);
+      return result[0];
+    },
+
+    async find(where: Partial<T> = {}): Promise<T[]> {
+      const keys = Object.keys(where);
+      const values: any[] = [];
+
+      let sql = `SELECT * FROM "${tableName}"`;
+
+      if (keys.length > 0) {
+        const clauses = keys.map((key, i) => `"${key}" = $${i + 1}`);
+        sql += ` WHERE ${clauses.join(" AND ")}`;
+        values.push(...keys.map((key) => where[key as keyof T]));
+      }
+
+      const result = await query<T>(sql, values);
+      return result;
+    },
+
+    async update(where: Partial<T>, data: Partial<T>): Promise<T[]> {
+      const whereKeys = Object.keys(where);
+      const dataKeys = Object.keys(data);
+
+      if (whereKeys.length === 0)
+        throw new Error("Missing WHERE clause in update");
+      if (dataKeys.length === 0) throw new Error("No update data provided");
+
+      const setClauses = dataKeys.map((key, i) => `"${key}" = $${i + 1}`);
+      const whereClauses = whereKeys.map(
+        (key, i) => `"${key}" = $${i + 1 + dataKeys.length}`
+      );
+
+      const sql = `
+        UPDATE "${tableName}"
+        SET ${setClauses.join(", ")}
+        WHERE ${whereClauses.join(" AND ")}
+        RETURNING *;
+      `;
+
+      const values = [
+        ...dataKeys.map((k) => data[k as keyof T]),
+        ...whereKeys.map((k) => where[k as keyof T]),
+      ];
+
+      const result = await query<T>(sql.trim(), values);
+      return result;
+    },
+
+    async delete(where: Partial<T>): Promise<number> {
+      const keys = Object.keys(where);
+      if (keys.length === 0) throw new Error("Missing WHERE clause in delete");
+
+      const clauses = keys.map((key, i) => `"${key}" = $${i + 1}`);
+      const sql = `DELETE FROM "${tableName}" WHERE ${clauses.join(" AND ")}`;
+
+      const values = keys.map((k) => where[k as keyof T]);
+
+      // Optional improvement: track rowCount from query function
+      const result = await query<T>(sql, values);
+      return result.length;
     },
   };
 }
