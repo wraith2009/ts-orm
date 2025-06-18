@@ -7,6 +7,7 @@ defineModel("users", {
   id: DataTypes.int({ primaryKey: true }),
   name: DataTypes.text({ nullable: false }),
   email: DataTypes.text({ unique: true }),
+  password: DataTypes.text({ nullable: true }),
 });
 
 defineModel("profiles", {

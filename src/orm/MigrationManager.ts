@@ -5,6 +5,7 @@ import { time } from "console";
 import { ModelRegistry } from "./ModelRegistry";
 import { generateCreateTableSQL } from "./sqlGenerator";
 import { tableExists } from "./Migrate";
+import { diffCOlumns } from "./diffColumns";
 
 const MIGRATION_FOLDER = path.join(__dirname, "../../migrations");
 const MIGRATION_TABLE = `_migrations`;
@@ -39,30 +40,41 @@ export async function markMigrationAsApplied(name: string) {
 }
 
 export async function generateMigration() {
-  ensureMigrationExists(); // makes /migrations dir
-  await ensureMigrationTableExists(); // makes _migrations table
+  ensureMigrationExists(); // ensure /migrations dir exists
+  await ensureMigrationTableExists(); // ensure _migrations table exists
 
   const models = ModelRegistry.getModels();
 
-  // STEP 1: Filter only those tables that don’t exist
   const pendingModels = [];
+  const alterTableStmts: string[] = [];
 
   for (const model of models) {
     const exists = await tableExists(model.tableName);
     if (!exists) {
       pendingModels.push(model);
+    } else {
+      const alterStatements = await diffCOlumns(model);
+      if (alterStatements.length > 0) {
+        alterTableStmts.push(...alterStatements);
+      }
     }
   }
 
-  // STEP 2: If none pending, exit
-  if (pendingModels.length === 0) {
+  // If no new models or schema changes, exit
+  if (pendingModels.length === 0 && alterTableStmts.length === 0) {
     console.log("⚠️ No new schema changes to migrate.");
     return;
   }
 
-  // STEP 3: Generate SQL
-  const statements = pendingModels
+  // Generate SQL statements
+  const createStatements = pendingModels
     .map(generateCreateTableSQL)
+    .filter(Boolean)
+    .join("\n\n");
+
+  const alterStatements = alterTableStmts.join("\n\n");
+
+  const finalSQL = [createStatements, alterStatements]
     .filter(Boolean)
     .join("\n\n");
 
@@ -75,8 +87,8 @@ export async function generateMigration() {
   const filename = `${timestamp}_migration.sql`;
   const filePath = path.join(MIGRATION_FOLDER, filename);
 
-  fs.writeFileSync(filePath, statements + "\n");
-  console.log(` Migration generated: ${filename}`);
+  fs.writeFileSync(filePath, finalSQL + "\n");
+  console.log(`📦 Migration generated: ${filename}`);
 }
 
 export async function applyMigrations() {
