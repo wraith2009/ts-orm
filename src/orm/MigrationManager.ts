@@ -79,4 +79,36 @@ export async function generateMigration() {
   console.log(` Migration generated: ${filename}`);
 }
 
+export async function applyMigrations() {
+  await ensureMigrationTableExists();
+  ensureMigrationExists();
+
+  const applied = await listAppliedMigrations();
+  const files = fs
+    .readdirSync(MIGRATION_FOLDER)
+    .filter((f) => f.endsWith(".sql"));
+
+  for (const file of files) {
+    if (applied.includes(file)) {
+      console.log(`skipping already applied: ${file}`);
+      continue;
+    }
+
+    const filePath = path.join(MIGRATION_FOLDER, file);
+    const sql = fs.readFileSync(filePath, "utf-8");
+
+    try {
+      console.log(`Applyin migration: ${file}`);
+      await query(sql);
+      await markMigrationAsApplied(file);
+      console.log(`Applied: ${file}`);
+    } catch (error) {
+      console.error(`Failed to apply ${file}`, error);
+      process.exit(1);
+    }
+  }
+
+  console.log("All migrations applied");
+}
+
 export { MIGRATION_FOLDER, MIGRATION_TABLE };
