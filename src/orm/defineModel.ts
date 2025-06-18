@@ -33,6 +33,7 @@
 
 import { query } from "../db/connection";
 import { ModelRegistry } from "./ModelRegistry";
+import { QueryBuilder } from "./QueryBuilder";
 
 /**
  * Defines and registers a new model (i.e., a database table) with its column schema.
@@ -117,5 +118,20 @@ export function defineModel<T extends Record<string, any>>(
       const result = await query<T>(sql, values);
       return result.length;
     },
+
+    hasMany(relatedModel: any, foreignKey: string) {
+      return async (userId: any) => {
+        return relatedModel.find({ [foreignKey]: userId });
+      };
+    },
+
+    belongsTo(relatedModel: any, foreignKey: string) {
+      return async (record: T) => {
+        const foreignId = record[foreignKey];
+        return foreignId ? relatedModel.find({ id: foreignId }) : null;
+      };
+    },
+
+    query: () => new QueryBuilder<T>("users"),
   };
 }

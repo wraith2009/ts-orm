@@ -24,6 +24,16 @@ function columnToSQL(columnName: string, col: ColumnDefinition): string {
   if (col.primaryKey) parts.push("PRIMARY KEY");
   if (col.unique) parts.push("UNIQUE");
   if (col.nullable === false) parts.push("NOT NULL");
+  if (col.defaultValue !== undefined)
+    parts.push(`DEFAULT '${col.defaultValue}`);
+
+  if (col.references) {
+    const { table, column, onDelete, onUpdate } = col.references;
+    let refClause = `REFERENCES "${table}"("${column}")`;
+    if (onDelete) refClause += `ON DELETE ${onDelete}`;
+    if (onUpdate) refClause += `ON UPDATE ${onUpdate}`;
+    parts.push(refClause);
+  }
 
   return parts.join(" ");
 }

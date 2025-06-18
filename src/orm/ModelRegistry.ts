@@ -22,6 +22,13 @@ export type ColumnDefinition = {
   primaryKey?: boolean;
   unique?: boolean;
   nullable?: boolean;
+  defaultValue?: any;
+  references?: {
+    table: string;
+    column: string;
+    onDelete?: "CASCADE" | "SET NULL" | "RESTRICT";
+    onUpdate?: "CASCADE" | "SET NULL" | "RESTRICT";
+  };
 };
 
 /**
